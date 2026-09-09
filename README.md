@@ -3,7 +3,7 @@
 
 Предметна область: Замовлення.
 
-Сутності: Customer, Product, Order, OrderLine
+Сутності: Customer, Product, Order, OrderLine.
 
 Призначення: оформлення замовлень і підрахунку їхніх сум.
 
@@ -15,3 +15,10 @@ dotnet run --project src/Cli
 
 ## Середовище
 .NET SDK 10.0, Windows 10 x64
+
+## Self-contained публікація
+
+Розмір зібраного застосунку для windows та linux
+
+- win-x64 - 76.5 мб
+- linux-x64 - 78.7 мб
