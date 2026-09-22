@@ -1,24 +1,48 @@
-# OrderApp
-Наскрізний проєкт з крос-платформного програмування.
+  # OrderApp
+  Наскрізний проєкт з крос-платформного програмування.
 
-Предметна область: Замовлення.
+  Предметна область: Замовлення.
 
-Сутності: Customer, Product, Order, OrderLine.
+  Сутності: Customer, Product, Order, OrderLine.
 
-Призначення: оформлення замовлень і підрахунку їхніх сум.
+  Призначення: оформлення замовлень і підрахунку їхніх сум.
 
-## Запуск
-```bash
-dotnet build
-dotnet run --project src/Cli
-```
+  ## Структура solution
 
-## Середовище
-.NET SDK 10.0, Windows 10 x64
+      OrderApp/
+      ├── OrderApp.slnx
+      ├── README.md
+      ├── .gitignore
+      └── src/
+          ├── Core/
+          │   ├── Core.csproj
+          │   └── EnvironmentInfo.cs
+          └── Cli/
+              ├── Cli.csproj
+              └── Program.cs
 
-## Self-contained публікація
+  ## Запуск
+  ```bash
+  dotnet build
+  dotnet run --project src/Cli
+  ```
 
-Розмір зібраного застосунку для windows та linux
+  ## Публікація
 
-- win-x64 - 76.5 мб
-- linux-x64 - 78.7 мб
+  ```bash
+  dotnet publish src/Cli -c Release -r win-x64 --self-contained true
+  dotnet publish src/Cli -c Release -r win-x64 --self-contained false
+  dotnet publish src/Cli -c Release -r linux-x64 --self-contained true
+  ```
+
+  ## Середовище
+  .NET SDK 10.0, Windows 10 x64
+
+
+  ## Розміри публікацій
+
+  | RID | Режим | Розмір | Потрібен встановлений runtime |
+  |---|---|---:|---|
+  | win-x64 | self-contained | 76.5 МБ | ні |
+  | win-x64 | framework-dependent | 195 КБ | так (.NET 10) |
+  | linux-x64 | self-contained | 78.8 МБ | ні |
