@@ -1,48 +1,85 @@
-  # OrderApp
-  Наскрізний проєкт з крос-платформного програмування.
+# OrderApp
 
-  Предметна область: Замовлення.
+Наскрізний проєкт з крос-платформного програмування.
 
-  Сутності: Customer, Product, Order, OrderLine.
+Предметна область: Замовлення.
 
-  Призначення: оформлення замовлень і підрахунку їхніх сум.
+Сутності: Customer, Product, Order, OrderLine.
 
-  ## Структура solution
+Призначення: оформлення замовлень і підрахунку їхніх сум.
 
-      OrderApp/
-      ├── OrderApp.slnx
-      ├── README.md
-      ├── .gitignore
-      └── src/
-          ├── Core/
-          │   ├── Core.csproj
-          │   └── EnvironmentInfo.cs
-          └── Cli/
-              ├── Cli.csproj
-              └── Program.cs
+## Структура solution
 
-  ## Запуск
-  ```bash
-  dotnet build
-  dotnet run --project src/Cli
-  ```
-
-  ## Публікація
-
-  ```bash
-  dotnet publish src/Cli -c Release -r win-x64 --self-contained true
-  dotnet publish src/Cli -c Release -r win-x64 --self-contained false
-  dotnet publish src/Cli -c Release -r linux-x64 --self-contained true
-  ```
-
-  ## Середовище
-  .NET SDK 10.0, Windows 10 x64
+    OrderApp/
+    ├── OrderApp.slnx
+    ├── README.md
+    ├── .gitignore
+    └── src/
+        ├── Core/
+        │   ├── Core.csproj
+        │   └── EnvironmentInfo.cs
+        └── Cli/
+            ├── Cli.csproj
+            └── Program.cs
 
 
-  ## Розміри публікацій
+### Multi-targeting
 
-  | RID | Режим | Розмір | Потрібен встановлений runtime |
-  |---|---|---:|---|
-  | win-x64 | self-contained | 76.5 МБ | ні |
-  | win-x64 | framework-dependent | 195 КБ | так (.NET 10) |
-  | linux-x64 | self-contained | 78.8 МБ | ні |
+Бібліотека Core збирається для двох цільових фреймворків:
+
+- `net8.0`;
+- `net10.0`.
+
+## Середовище
+
+.NET SDK 10.0, Windows 10 x64.
+
+## Запуск
+
+```bash
+dotnet build
+dotnet run --project src/Cli
+```
+
+Для виведення інформації у форматі JSON:
+
+```bash
+dotnet run --project src/Cli -- --json
+```
+
+## Публікація
+
+```bash
+dotnet publish src/Cli -c Release -r win-x64 -f net10.0 --self-contained true
+dotnet publish src/Cli -c Release -r win-x64 -f net10.0 --self-contained false
+dotnet publish src/Cli -c Release -r linux-x64 -f net10.0 --self-contained true
+```
+
+## Розміри публікацій
+
+| RID | Режим | Розмір | Потрібен встановлений runtime |
+|---|---|---:|---|
+| win-x64 | self-contained | 76.5 МБ | ні |
+| win-x64 | framework-dependent | 196 КБ | так (.NET 10) |
+| linux-x64 | self-contained | 78.8 МБ | ні |
+
+## Додаткові завдання
+
+### Single-file публікація
+
+```bash
+dotnet publish src/Cli -c Release -r win-x64 -f net10.0 --self-contained true -p:PublishSingleFile=true
+```
+
+Результат:
+
+- розмір публікації: 70 мб;
+- кількість файлів у каталозі publish: 3.
+
+### Trimmed публікація
+
+```bash
+dotnet publish src/Cli -c Release -r win-x64 -f net10.0 --self-contained true -p:PublishTrimmed=true
+```
+
+Розмір trimmed-публікації: 19,3 мб.
