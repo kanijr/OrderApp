@@ -27,27 +27,92 @@ if (!File.Exists(path))
   return 1;
 }
 
-ImportResult<ProductDto> result =
-    ProductCsvImporter.Load(path);
 
-Console.WriteLine(
-    $"Завантажено записів: {result.Items.Count}");
-
-foreach (ProductDto product in result.Items.Take(5))
+if (args.Contains("--mixed"))
 {
-  Console.WriteLine(
-      $" {product.Id,-7} {product.Name,-30} {product.Price,10:F2}");
-}
+  ImportResult<MixedItemDto> result =
+      MixedCsvImporter.Load(path);
 
-if (result.Errors.Count > 0)
-{
   Console.WriteLine(
-      $"Пропущено рядків: {result.Errors.Count}");
+    $"Статистика: всього записів {result.Total}, " +
+    $"прийнято {result.Accepted}, " +
+    $"пропущено {result.Skipped}, " +
+    $"помилок {result.ErrorPercent:F1}%");
 
-  foreach (string error in result.Errors)
+  foreach (MixedItemDto item in result.Items.Take(5))
   {
-    Console.WriteLine($" ! {error}");
-  }
-}
+    switch (item)
+    {
+      case ProductItemDto product:
+        Console.WriteLine(
+            $" Product  " +
+            $"{product.Product.Id,-7} " +
+            $"{product.Product.Name,-30} " +
+            $"{product.Product.Price,10:F2}");
+        break;
 
-return 0;
+      case CustomerItemDto customer:
+        Console.WriteLine(
+            $" Customer " +
+            $"{customer.Customer.Id,-7} " +
+            $"{customer.Customer.Name,-30} " +
+            $"{customer.Customer.Email ?? "-"}");
+        break;
+    }
+  }
+
+  if (result.Errors.Count > 0)
+  {
+    Console.WriteLine(
+        $"Пропущено рядків: {result.Errors.Count}");
+
+    foreach (string error in result.Errors)
+    {
+      Console.WriteLine($" ! {error}");
+    }
+  }
+
+  return 0;
+}
+else
+{
+  string extension = Path.GetExtension(path).ToLowerInvariant();
+
+  ImportResult<ProductDto> productResult = extension switch
+  {
+    ".csv" => ProductCsvImporter.Load(path),
+
+    ".json" => ProductJsonImporter.Load(path),
+
+    _ => new ImportResult<ProductDto>(
+        [],
+        [$"Непідтримуваний формат файлу: {extension}"])
+  };
+
+  Console.WriteLine(
+    $"Статистика: всього записів {productResult.Total}, " +
+    $"прийнято {productResult.Accepted}, " +
+    $"пропущено {productResult.Skipped}, " +
+    $"помилок {productResult.ErrorPercent:F1}%");
+
+  foreach (ProductDto product in productResult.Items.Take(5))
+  {
+    Console.WriteLine(
+        $" {product.Id,-7} " +
+        $"{product.Name,-30} " +
+        $"{product.Price,10:F2}");
+  }
+
+  if (productResult.Errors.Count > 0)
+  {
+    Console.WriteLine(
+        $"Пропущено рядків: {productResult.Errors.Count}");
+
+    foreach (string error in productResult.Errors)
+    {
+      Console.WriteLine($" ! {error}");
+    }
+  }
+
+  return 0;
+}

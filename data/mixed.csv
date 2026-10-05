@@ -1,0 +1,9 @@
+type;id;value1;value2
+P;P-001;Ноутбук Lenovo;29999.99
+C;C-001;Іван Петренко;ivan@example.com
+P;P-002;Миша Logitech;799.50
+C;C-002;Олег Іваненко;
+P;P-003;Клавіатура HyperX;2499.00
+C;C-003;Марія Коваль;maria@example.com
+C;C-004;;
+P;P-004;не коректна ціна; багато
