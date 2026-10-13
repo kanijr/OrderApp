@@ -9,7 +9,7 @@ public sealed class Order
 
   public string Id { get; }
   public string CustomerId { get; }
-  public bool IsConfirmed { get; private set; }
+  public OrderStatus Status { get; private set; } = OrderStatus.Draft;
 
   public IReadOnlyList<OrderLine> Lines => _lines.AsReadOnly();
   public decimal Total => _lines.Sum(line => line.Total);
@@ -38,31 +38,48 @@ public sealed class Order
 
   public void AddLine(string productId, string name, decimal price, int quantity)
   {
-    if (IsConfirmed)
+    if (Status != OrderStatus.Draft)
       throw new InvalidOperationException(
-          $"Замовлення {Id} вже підтверджене, додавати товари не можна");
+          $"Замовлення {Id} має статус {Status}, додавати товари не можна");
 
     OrderLine line = OrderLine.Create(productId, name, price, quantity);
     _lines.Add(line);
   }
 
+  private void ChangeStatus(OrderStatus newStatus)
+  {
+    bool allowed = (Status, newStatus) switch
+    {
+      (OrderStatus.Draft, OrderStatus.Confirmed) => true,
+      (OrderStatus.Draft, OrderStatus.Cancelled) => true,
+      _ => false
+    };
+
+    if (!allowed)
+      throw new InvalidOperationException(
+          $"Неможливо змінити статус замовлення {Id} з {Status} на {newStatus}");
+
+    Status = newStatus;
+  }
+
   public void Confirm()
   {
-    if (IsConfirmed)
-      throw new InvalidOperationException(
-          $"Замовлення {Id} вже підтверджене");
-
-    if (_lines.Count == 0)
+    if (_lines.Count == 0 && Status == OrderStatus.Draft)
       throw new InvalidOperationException(
           $"Не можна підтвердити порожнє замовлення {Id}");
 
-    IsConfirmed = true;
+    ChangeStatus(OrderStatus.Confirmed);
+  }
+
+  public void Cancel()
+  {
+    ChangeStatus(OrderStatus.Cancelled);
   }
 
   public OrderDto ToDto() => new(
       Id,
       CustomerId,
-      IsConfirmed,
+      Status,
       _lines.Select(line => line.ToDto()).ToList()
   );
 
@@ -87,8 +104,23 @@ public sealed class Order
       );
     }
 
-    if (dto.IsConfirmed)
-      order.Confirm();
+    switch (dto.Status)
+    {
+      case OrderStatus.Draft:
+        break;
+
+      case OrderStatus.Confirmed:
+        order.Confirm();
+        break;
+
+      case OrderStatus.Cancelled:
+        order.Cancel();
+        break;
+
+      default:
+        throw new ArgumentOutOfRangeException(nameof(dto),
+            $"Невідомий статус замовлення: {dto.Status}");
+    }
 
     return order;
   }

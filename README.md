@@ -8,33 +8,55 @@
 
 Призначення: оформлення замовлень і підрахунку їхніх сум.
 
+
+### Інваріанти доменої моделі
+
+- Ідентифікатори замовлення, покупця й товару не можуть бути порожніми.
+- Ім'я покупця та назва товару обов'язкові; email покупця необов'язковий.
+- Ціна товару не може бути від'ємною, а кількість повинна бути більшою за нуль.
+- Додавати товари можна лише до замовлення зі статусом `Draft`.
+- Порожнє замовлення не можна підтвердити.
+- Дозволені переходи станів: `Draft → Confirmed` і `Draft → Cancelled`. Повторні та інші переходи заборонені.
+- Один покупець може мати не більше п'яти замовлень у статусі `Draft` одночасно. Після підтвердження або скасування чернетки можна створити нову через `CustomerOrderService`.
+
+
 ## Структура solution
 
-
-    OrderApp/
-    ├── OrderApp.slnx
-    ├── README.md
-    ├── .gitignore
-    ├── data/
-    │   ├── sample.csv
-    │   ├── sample.json
-    │   └── mixed.csv
-    └── src/
-        ├── Core/
-        │   ├── Core.csproj
-        │   ├── EnvironmentInfo.cs
-        │   ├── Dto/
-        │   │   ├── ProductDto.cs
-        │   │   ├── CustomerDto.cs
-        │   │   ├── MixedItemDto.cs
-        │   │   └── ImportResult.cs
-        │   └── Import/
-        │       ├── ProductCsvImporter.cs
-        │       ├── ProductJsonImporter.cs
-        │       └── MixedCsvImporter.cs
-        └── Cli/
-            ├── Cli.csproj
-            └── Program.cs
+```text
+OrderApp/
+├── OrderApp.slnx
+├── README.md
+├── .gitignore
+├── data/
+│   ├── sample.csv
+│   ├── sample.json
+│   └── mixed.csv
+└── src/
+    ├── Core/
+    │   ├── Core.csproj
+    │   ├── EnvironmentInfo.cs
+    │   ├── Dto/
+    │   │   ├── ProductDto.cs
+    │   │   ├── CustomerDto.cs
+    │   │   ├── MixedItemDto.cs
+    │   │   ├── OrderDto.cs
+    │   │   ├── OrderLineDto.cs
+    │   │   └── ImportResult.cs
+    │   ├── Domain/
+    │   │   ├── Customer.cs
+    │   │   ├── Order.cs
+    │   │   ├── OrderLine.cs
+    │   │   ├── OrderStatus.cs
+    │   │   └── CustomerOrderService.cs
+    │   └── Import/
+    │       ├── ProductCsvImporter.cs
+    │       ├── ProductJsonImporter.cs
+    │       ├── MixedCsvImporter.cs
+    │       └── DomainImporter.cs
+    └── Cli/
+        ├── Cli.csproj
+        └── Program.cs
+```
 
 ### Multi-targeting
 
@@ -49,15 +71,15 @@
 
 ## Запуск
 
-Збірка проєкту:
+Збірка проєкту та приклади запуску:
 
 ```bash
 dotnet build
 dotnet run --project src/Cli
-dotnet run --project src/Cli -- data/sample.csv
-dotnet run --project src/Cli -- data/sample.json
 dotnet run --project src/Cli -- data/mixed.csv --mixed
+dotnet run --project src/Cli -- --domain
 ```
+
 
 ## Формати даних
 
@@ -109,6 +131,7 @@ C;C-001;Іван Петренко;ivan@example.com
 
 - `P` — `Product`;
 - `C` — `Customer`.
+
 ## Публікація
 
 ```bash
@@ -116,11 +139,3 @@ dotnet publish src/Cli -c Release -r win-x64 -f net10.0 --self-contained true
 dotnet publish src/Cli -c Release -r win-x64 -f net10.0 --self-contained false
 dotnet publish src/Cli -c Release -r linux-x64 -f net10.0 --self-contained true
 ```
-
-## Розміри публікацій
-
-| RID | Режим | Розмір | Потрібен встановлений runtime |
-|---|---|---:|---|
-| win-x64 | self-contained | 76.5 МБ | ні |
-| win-x64 | framework-dependent | 196 КБ | так (.NET 10) |
-| linux-x64 | self-contained | 78.8 МБ | ні |
