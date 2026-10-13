@@ -1,6 +1,7 @@
 ﻿using Core;
 using Core.Dto;
 using Core.Import;
+using Core.Domain;
 
 EnvironmentReport report = EnvironmentInfo.Collect();
 
@@ -26,7 +27,6 @@ if (!File.Exists(path))
 
   return 1;
 }
-
 
 if (args.Contains("--mixed"))
 {
@@ -71,8 +71,6 @@ if (args.Contains("--mixed"))
       Console.WriteLine($" ! {error}");
     }
   }
-
-  return 0;
 }
 else
 {
@@ -113,6 +111,74 @@ else
       Console.WriteLine($" ! {error}");
     }
   }
+}
 
-  return 0;
+Console.WriteLine("\n=== Сценарій 1: успішне замовлення ===");
+
+Order order = Order.Create("C-001");
+
+order.AddLine("P-001", "Ноутбук", 25000m, 1);
+order.AddLine("P-002", "Мишка", 500m, 2);
+
+Console.WriteLine($"Замовлення: {order.Id}");
+Console.WriteLine($"Покупець: {order.CustomerId}");
+
+foreach (OrderLine line in order.Lines)
+{
+  Console.WriteLine(
+    $"{line.Name}: {line.Quantity} x {line.Price} = {line.Total} грн");
+}
+
+Console.WriteLine($"Загальна сума: {order.Total} грн");
+
+order.Confirm();
+Console.WriteLine($"Підтверджено: {order.IsConfirmed}");
+
+OrderDto dto = order.ToDto();
+Order restored = Order.FromDto(dto);
+
+Console.WriteLine($"Відновлене замовлення: {restored.Id}");
+Console.WriteLine($"Сума після відновлення: {restored.Total} грн");
+
+
+Console.WriteLine("\n=== Сценарій 2: порушення інваріантів ===");
+
+TryDo("Порожній покупець", () => Order.Create(" "));
+
+TryDo("Нульова кількість", () => order.AddLine("P-003", "Клавіатура", 1000m, 0));
+
+TryDo("Від'ємна ціна", () => OrderLine.Create("P-003", "Клавіатура", -100m, 1));
+
+TryDo("Додавання після підтвердження", () => order.AddLine("P-003", "Клавіатура", 1000m, 1));
+
+TryDo("Повторне підтвердження", () => order.Confirm());
+
+Console.WriteLine($"\nСума після помилок: {order.Total} грн");
+Console.WriteLine($"Кількість рядків після помилок: {order.Lines.Count}");
+
+Order emptyOrder = Order.Create("C-002");
+
+TryDo("Підтвердження порожнього замовлення", () => emptyOrder.Confirm());
+
+
+return 0;
+
+
+static void TryDo(string title, Action action)
+{
+  try
+  {
+    action();
+    Console.WriteLine($"{title}: виняток не спрацював!");
+  }
+  catch (ArgumentException ex)
+  {
+    Console.WriteLine(
+      $"{title}: {ex.GetType().Name} — {ex.Message}");
+  }
+  catch (InvalidOperationException ex)
+  {
+    Console.WriteLine(
+      $"{title}: {ex.GetType().Name} — {ex.Message}");
+  }
 }
