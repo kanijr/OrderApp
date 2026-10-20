@@ -35,6 +35,9 @@ OrderApp/
     ├── Core/
     │   ├── Core.csproj
     │   ├── EnvironmentInfo.cs
+    │   ├── SampleData.cs
+    │   ├── Abstractions/
+    │   │   └── IOrderStore.cs
     │   ├── Dto/
     │   │   ├── ProductDto.cs
     │   │   ├── CustomerDto.cs
@@ -46,13 +49,19 @@ OrderApp/
     │   │   ├── Customer.cs
     │   │   ├── Order.cs
     │   │   ├── OrderLine.cs
-    │   │   ├── OrderStatus.cs
-    │   │   └── CustomerOrderService.cs
-    │   └── Import/
-    │       ├── ProductCsvImporter.cs
-    │       ├── ProductJsonImporter.cs
-    │       ├── MixedCsvImporter.cs
-    │       └── DomainImporter.cs
+    │   │   └── OrderStatus.cs
+    │   ├── Import/
+    │   │   ├── ProductCsvImporter.cs
+    │   │   ├── ProductJsonImporter.cs
+    │   │   ├── MixedCsvImporter.cs
+    │   │   └── DomainImporter.cs
+    │   ├── Services/
+    │   │   └── OrderService.cs
+    │   └── Storage/
+    │       ├── CachingOrderStore.cs
+    │       ├── FileOrderStore.cs
+    │       ├── InMemoryOrderStore.cs
+    │       └── StoreFactory.cs
     └── Cli/
         ├── Cli.csproj
         └── Program.cs
@@ -76,8 +85,9 @@ OrderApp/
 ```bash
 dotnet build
 dotnet run --project src/Cli
-dotnet run --project src/Cli -- data/mixed.csv --mixed
-dotnet run --project src/Cli -- --domain
+dotnet run --project src/Cli -- --file
+dotnet run --project src/Cli -- --cache
+dotnet run --project src/Cli -- --file --cache
 ```
 
 
@@ -97,40 +107,6 @@ P-002;Миша Logitech;799.50
 ```text
 id;name;price
 ```
-
-### JSON
-
-Файл `data/sample.json` містить товари у форматі:
-
-```json
-{
-  "id": "P-001",
-  "name": "Ноутбук Lenovo",
-  "price": 29999.99
-}
-```
-
-```json
-{
-  "id": "P-002",
-  "name": "Миша Logitech",
-  "price": 799.50
-}
-```
-
-### Mixed CSV
-
-Файл `data/mixed.csv` містить товари й покупців:
-
-```text
-P;P-001;Ноутбук Lenovo;29999.99
-C;C-001;Іван Петренко;ivan@example.com
-```
-
-де:
-
-- `P` — `Product`;
-- `C` — `Customer`.
 
 ## Публікація
 
