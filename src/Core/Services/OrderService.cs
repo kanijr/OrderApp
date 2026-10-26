@@ -1,5 +1,7 @@
 using Core.Abstractions;
 using Core.Domain;
+using Core.Events;
+
 
 namespace Core.Services;
 
@@ -8,6 +10,10 @@ public sealed class OrderService(IOrderStore store)
     private readonly IOrderStore _store =
         store ?? throw new ArgumentNullException(nameof(store));
 
+    public event EventHandler<OrderChangedEventArgs>? Changed;
+
+    private void OnChanged(Order order, OrderChangeKind kind) =>
+        Changed?.Invoke(this, new OrderChangedEventArgs(order.Id, kind, order.Lines.Count, order.Total));
     public Order CreateOrder(string customerId)
     {
         int draftCount = _store.List().Count(o =>
@@ -22,6 +28,7 @@ public sealed class OrderService(IOrderStore store)
 
         _store.Add(order);
 
+        OnChanged(order, OrderChangeKind.OrderCreated);
         return order;
     }
 
@@ -39,6 +46,7 @@ public sealed class OrderService(IOrderStore store)
         order.AddLine(productId, name, price, quantity);
 
         _store.Update(order);
+        OnChanged(order, OrderChangeKind.LineAdded);
     }
 
     public void ConfirmOrder(string orderId)
@@ -50,6 +58,7 @@ public sealed class OrderService(IOrderStore store)
         order.Confirm();
 
         _store.Update(order);
+        OnChanged(order, OrderChangeKind.OrderConfirmed);
     }
 
     public void CancelOrder(string orderId)
@@ -63,7 +72,7 @@ public sealed class OrderService(IOrderStore store)
         _store.Update(order);
     }
 
-    public IReadOnlyList<Order> Search(Func<Order, bool> predicate)
+    public IReadOnlyList<Order> FindAll(Func<Order, bool> predicate)
     {
         ArgumentNullException.ThrowIfNull(predicate);
         return _store.List().Where(predicate).ToList();

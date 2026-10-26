@@ -1,8 +1,7 @@
 ﻿using Core.Services;
 using Core.Abstractions;
 using Core.Storage;
-using Core.Domain;
-using System.Buffers;
+using Core.Events;
 
 IOrderStore store = StoreFactory.Create(args);
 var service = new OrderService(store);
@@ -17,10 +16,31 @@ if (args.Contains("--file"))
     Console.WriteLine($"Файл з даними: {dataPath}");
 }
 
-Console.WriteLine($"Початкових замовлень: {service.All().Count}");
+string logPath = Path.Combine(
+    AppContext.BaseDirectory, "logs", "app.log");
+
+Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+
+void OnOrderChanged(object? sender, OrderChangedEventArgs e)
+{
+    string line =
+        $"{e.At:HH:mm:ss} {e.Kind,-15} " +
+        $"{e.OrderId} Рядків: {e.LinesCount} " +
+        $"Сума: {e.Total:F2} грн";
+
+    Console.WriteLine(line);
+    File.AppendAllText(logPath, line + Environment.NewLine);
+}
+
+service.Changed += OnOrderChanged;
+
+int changes = 0;
+service.Changed += (_, _) => changes++;
+
+
+Console.WriteLine("\nОперації із замовленням");
 
 var created = service.CreateOrder("C-016");
-Console.WriteLine($"\nСтворено замовлення: {created.Id}");
 
 service.AddLine(
     created.Id, "P-001", "Ноутбук Lenovo", 29999.99m, 1);
@@ -28,77 +48,44 @@ service.AddLine(
 service.AddLine(
     created.Id, "P-002", "Миша Logitech", 799.50m, 2);
 
-var found = service.Find(created.Id);
-
-if (found is not null)
-{
-    Console.WriteLine(
-        $"Знайдено: {found.Id}, " +
-        $"Рядків: {found.Lines.Count}, Сума: {found.Total}");
-}
 
 service.ConfirmOrder(created.Id);
-Console.WriteLine("Замовлення підтверджено.");
+Console.WriteLine($"Подій отримано: {changes}");
+
+
+Console.WriteLine("\nПеревірка інваріанта");
 
 try
 {
-    service.ConfirmOrder("non-existing-id");
+    service.AddLine(
+        created.Id, "P-003", "Mouse", 500m, 1);
 }
 catch (InvalidOperationException ex)
 {
-    Console.WriteLine($"Не існуюче id: {ex.Message}");
+    Console.WriteLine($"Помилка: {ex.Message}");
 }
 
-try
-{
-    service.CancelOrder(created.Id);
-}
-catch (InvalidOperationException ex)
-{
-    Console.WriteLine($"\nСпроба скасувати після підтвердження: {ex.Message}");
-}
+Console.WriteLine($"Подій отримано: {changes}");
 
 
-Console.WriteLine("\nСписок замовлень:");
+Console.WriteLine("\nВідписка від події");
 
-foreach (var order in service.All())
-{
-    Console.WriteLine(
-        $"ID: {order.Id}, " +
-        $"Покупець: {order.CustomerId}, " +
-        $"Статус: {order.Status}, " +
-        $"Сума: {order.Total}");
-}
+service.Changed -= OnOrderChanged;
 
-if (args.Contains("--cache"))
-{
-    Console.WriteLine("\nПеревірка кешування:");
 
-    var first = store.List();
-    var second = store.List();
+var secondOrder = service.CreateOrder("C-017");
 
-    Console.WriteLine(
-        $"Повторно використано кешований список: " +
-        $"{ReferenceEquals(first, second)}");
-}
+Console.WriteLine($"Створено замовлення: {secondOrder.Id}");
+Console.WriteLine($"Подій отримано: {changes}");
+
 
 Console.WriteLine("\nПошук замовлень:");
 
-var confirmed = service.Search(o =>
-    o.Status == OrderStatus.Confirmed);
-
-Console.WriteLine($"Підтверджених: {confirmed.Count}");
-
-var expensive = service.Search(o => o.Total > 5000m);
+var expensive = service.FindAll(o => o.Total > 5000m);
 
 Console.WriteLine($"Замовлень понад 5000 грн: {expensive.Count}");
 
-var customerOrders = service.Search(o =>
-    o.CustomerId == "C-016");
-
-Console.WriteLine("\nЗамовлення покупця C-016:");
-
-foreach (var order in customerOrders)
+foreach (var order in expensive)
 {
     Console.WriteLine(
         $"ID: {order.Id}, " +
