@@ -11,7 +11,7 @@ public static class StoreFactory
     bool useCache = args.Contains("--cache");
 
     string dataPath = Path.Combine(
-        AppContext.BaseDirectory, "data", "orders.json");
+        Directory.GetCurrentDirectory(), "data", "orders.json");
 
     IOrderStore store = useFile
         ? new FileOrderStore(dataPath)

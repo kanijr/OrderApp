@@ -5,15 +5,27 @@ using Core.Events;
 
 namespace Core.Services;
 
-public sealed class OrderService(IOrderStore store)
+public sealed class OrderService(
+    IOrderStore store,
+    IEnumerable<INotificationSink>? sinks = null)
 {
     private readonly IOrderStore _store =
         store ?? throw new ArgumentNullException(nameof(store));
 
+    private readonly IReadOnlyList<INotificationSink> _sinks = (sinks ?? []).ToList();
+
     public event EventHandler<OrderChangedEventArgs>? Changed;
 
-    private void OnChanged(Order order, OrderChangeKind kind) =>
-        Changed?.Invoke(this, new OrderChangedEventArgs(order.Id, kind, order.Lines.Count, order.Total));
+    private void OnChanged(Order order, OrderChangeKind kind)
+    {
+        var e = new OrderChangedEventArgs(
+            order.Id, kind, order.Lines.Count, order.Total);
+
+        foreach (var sink in _sinks)
+            sink.Notify(e);
+
+        Changed?.Invoke(this, e);
+    }
     public Order CreateOrder(string customerId)
     {
         int draftCount = _store.List().Count(o =>

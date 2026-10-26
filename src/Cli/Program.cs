@@ -2,34 +2,37 @@
 using Core.Abstractions;
 using Core.Storage;
 using Core.Events;
+using Core.Import;
+using Cli.Notifications;
 
 IOrderStore store = StoreFactory.Create(args);
-var service = new OrderService(store);
+
 
 Console.WriteLine($"Сховище: {store.GetType().Name}");
 
 if (args.Contains("--file"))
 {
     string dataPath = Path.Combine(
-        AppContext.BaseDirectory, "data", "orders.json");
+        Directory.GetCurrentDirectory(), "data", "orders.json");
 
     Console.WriteLine($"Файл з даними: {dataPath}");
 }
 
 string logPath = Path.Combine(
-    AppContext.BaseDirectory, "logs", "app.log");
+    Directory.GetCurrentDirectory(), "logs", "app.log");
 
-Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+INotificationSink[] sinks =
+[
+    new ConsoleSink(),
+    new FileSink(logPath)
+];
+
+var service = new OrderService(store, sinks);
+
 
 void OnOrderChanged(object? sender, OrderChangedEventArgs e)
 {
-    string line =
-        $"{e.At:HH:mm:ss} {e.Kind,-15} " +
-        $"{e.OrderId} Рядків: {e.LinesCount} " +
-        $"Сума: {e.Total:F2} грн";
-
-    Console.WriteLine(line);
-    File.AppendAllText(logPath, line + Environment.NewLine);
+    Console.WriteLine($"Подія Changed: {e.Kind}");
 }
 
 service.Changed += OnOrderChanged;
@@ -93,5 +96,23 @@ foreach (var order in expensive)
         $"Сума: {order.Total}");
 }
 
+
+Console.WriteLine("\nІмпорт CSV з Action<string>");
+
+string csvPath = Path.Combine(
+    Directory.GetCurrentDirectory(), "data", "sample.csv");
+
+int skipped = 0;
+
+var result = ProductCsvImporter.Load(
+    csvPath,
+    message =>
+    {
+        skipped++;
+        Console.WriteLine($"Пропущено: {message}");
+    });
+
+Console.WriteLine($"Успішно імпортовано: {result.Items.Count}");
+Console.WriteLine($"Пропущено рядків: {skipped}");
 
 return 0;
