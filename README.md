@@ -8,6 +8,13 @@
 
 Призначення: оформлення замовлень і підрахунку їхніх сум.
 
+### Відкладене виконання LINQ
+
+Оператори `Where` і `Select` формують запит, але його оброблення починається під час перебирання або виклику завершального оператора, наприклад `Count()` чи `ToList()`. У демонстрації два виклики `Count()` повертають різні результати, оскільки між ними змінюється початкова колекція. Після матеріалізації через `ToList()` створюється окремий список, кількість елементів у якому не залежить від подальшої зміни джерела.
+
+### Порівняння синтаксисів LINQ
+
+Синтаксис запитів `(from...group...into)` декларативно відображає структуру групування у стилі SQL, що робить його читабельнішим для складних вибірок. Методний синтаксис є компактнішим для послідовних операцій і дає прямий доступ до всього функціонала LINQ. Обидва підходи дають однаковий результат, оскільки компілятор C# трансформує запити у виклики методів.
 
 ### Інваріанти доменої моделі
 
@@ -17,7 +24,7 @@
 - Додавати товари можна лише до замовлення зі статусом `Draft`.
 - Порожнє замовлення не можна підтвердити.
 - Дозволені переходи станів: `Draft → Confirmed` і `Draft → Cancelled`. Повторні та інші переходи заборонені.
-- Один покупець може мати не більше п'яти замовлень у статусі `Draft` одночасно. Після підтвердження або скасування чернетки можна створити нову через `CustomerOrderService`.
+- Один покупець може мати не більше п'яти замовлень у статусі `Draft` одночасно. Після підтвердження або скасування чернетки можна створити нову через `OrderService`.
 
 
 ## Структура solution
@@ -37,6 +44,7 @@ OrderApp/
     │   ├── EnvironmentInfo.cs
     │   ├── SampleData.cs
     │   ├── Abstractions/
+    │   │   ├── INotificationSink.cs
     │   │   └── IOrderStore.cs
     │   ├── Dto/
     │   │   ├── ProductDto.cs
@@ -50,11 +58,23 @@ OrderApp/
     │   │   ├── Order.cs
     │   │   ├── OrderLine.cs
     │   │   └── OrderStatus.cs
+    │   ├── Events/
+    │   │   ├── OrderChangedEvenArgs.cs
+    │   │   └── OrderChangeKind.cs
+    │   ├── Extensions/
+    │   │   └── LinqExtensions.cs
     │   ├── Import/
     │   │   ├── ProductCsvImporter.cs
     │   │   ├── ProductJsonImporter.cs
     │   │   ├── MixedCsvImporter.cs
     │   │   └── DomainImporter.cs
+    │   ├── Reports/
+    │   │   ├── BenchmarkService.cs
+    │   │   ├── CustomerOrderSummary.cs
+    │   │   ├── CustomerTotalLine.cs
+    │   │   ├── GroupSummary.cs
+    │   │   ├── OrderReportLine.cs
+    │   │   └── ReportService.cs
     │   ├── Services/
     │   │   └── OrderService.cs
     │   └── Storage/
@@ -64,7 +84,10 @@ OrderApp/
     │       └── StoreFactory.cs
     └── Cli/
         ├── Cli.csproj
-        └── Program.cs
+        ├── Program.cs
+        └── Notifications/
+            ├── ConsoleSink.cs
+            └── FileSink.cs
 ```
 
 ### Multi-targeting
@@ -80,14 +103,11 @@ OrderApp/
 
 ## Запуск
 
-Збірка проєкту та приклади запуску:
+Збірка проєкту та приклади запуску (доступні команди: `report-top, report-expensive, report-sum, demo-deferred,demo-events, report-customers, report-top-orders, report-groups-query, report-benchmark`):
 
 ```bash
 dotnet build
-dotnet run --project src/Cli
-dotnet run --project src/Cli -- --file
-dotnet run --project src/Cli -- --cache
-dotnet run --project src/Cli -- --file --cache
+dotnet run --project src/Cli -- report-top
 ```
 
 

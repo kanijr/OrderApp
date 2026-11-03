@@ -5,6 +5,7 @@ using Core.Events;
 using Core.Import;
 using Core.Reports;
 using Cli.Notifications;
+using Core;
 
 IOrderStore store = StoreFactory.Create(args);
 
@@ -72,11 +73,50 @@ switch (command)
     DemoEvents();
     break;
 
+  case "report-customers":
+    foreach (var c in ReportService.CustomerOrders(
+        SampleData.Customers(), store.List()))
+    {
+      Console.WriteLine(
+          $"{c.CustomerId,-8} " +
+          $"{c.CustomerName,-12} " +
+          $"Замовлень: {c.OrdersCount,3} " +
+          $"Сума: {c.Total,12:F2} грн");
+    }
+    break;
+
+  case "report-top-orders":
+    foreach (var o in ReportService.TopOrders(store.List(), 5))
+    {
+      Console.WriteLine(
+          $"{o.OrderId,-10} " +
+          $"{o.CustomerId,-10} " +
+          $"{o.Status,-12} " +
+          $"{o.Total,12:F2} грн");
+    }
+    break;
+
+  case "report-groups-query":
+    foreach (var g in ReportService.ByStatusQuery(store.List()))
+    {
+      Console.WriteLine(
+          $"{g.Key,-12} " +
+          $"Замовлень: {g.Count,3} " +
+          $"Сума: {g.Total,12:F2} грн");
+    }
+    break;
+
+  case "report-benchmark":
+    var benchmark = BenchmarkService.Compare();
+
+    Console.WriteLine($"Кількість записів: {benchmark.Items}");
+    Console.WriteLine($"Без проміжного ToList: {benchmark.WithoutToListMs:F3} мс");
+    Console.WriteLine($"З проміжним ToList: {benchmark.WithToListMs:F3} мс");
+    Console.WriteLine($"Рядків у результаті: {benchmark.ResultCount}");
+    break;
+
   default:
-    Console.WriteLine(
-        "Команди: report-top | report-expensive | " +
-        "report-groups | report-sum | " +
-        "demo-deferred | demo-events");
+    Console.WriteLine("Невідома команда");
     break;
 }
 

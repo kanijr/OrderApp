@@ -4,6 +4,20 @@ namespace Core;
 
 public static class SampleData
 {
+  public static IEnumerable<Customer> Customers()
+  {
+    return
+    [
+        Customer.Create("C-001", "Андрій","Anrdry23@example.com"),
+        Customer.Create("C-002", "Марія"),
+        Customer.Create("C-003", "Олег"),
+        Customer.Create("C-004", "Ірина","Iryna71@example.com"),
+        Customer.Create("C-005", "Петро","Petro901@example.com"),
+        Customer.Create("C-006", "Наталія"),
+        Customer.Create("C-007", "Василь","Vasiyl22@example.com"),
+        Customer.Create("C-008", "Оксана")
+    ];
+  }
   public static IEnumerable<Order> Orders()
   {
     return

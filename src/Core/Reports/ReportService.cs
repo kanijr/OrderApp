@@ -1,22 +1,31 @@
 using Core.Domain;
+using Core.Extensions;
 
 namespace Core.Reports;
 
 public static class ReportService
 {
   public static IReadOnlyList<CustomerTotalLine> TopCustomers(
-      IEnumerable<Order> source, int n) =>
-      source
-          .GroupBy(o => o.CustomerId)
-          .Select(g => new CustomerTotalLine(
-              g.Key,
-              g.Count(),
-              g.Sum(o => o.Total)))
-          .OrderByDescending(x => x.Total)
-          .ThenBy(x => x.CustomerId, StringComparer.Ordinal)
-          .Take(n)
-          .ToList();
+    IEnumerable<Order> source, int n) =>
+    source
+        .GroupBy(o => o.CustomerId)
+        .Select(g => new CustomerTotalLine(
+            g.Key,
+            g.Count(),
+            g.Sum(o => o.Total)))
+        .TopBy(x => x.Total, x => x.CustomerId, n)
+        .ToList();
 
+  public static IReadOnlyList<OrderReportLine> TopOrders(
+    IEnumerable<Order> source, int n) =>
+    source
+        .TopBy(o => o.Total, o => o.Id, n)
+        .Select(o => new OrderReportLine(
+            o.Id,
+            o.CustomerId,
+            o.Status.ToString(),
+            o.Total))
+        .ToList();
   public static IReadOnlyList<OrderReportLine> ExpensiveOrders(
       IEnumerable<Order> source, decimal threshold) =>
       source
@@ -41,6 +50,22 @@ public static class ReportService
           .OrderByDescending(g => g.Total)
           .ThenBy(g => g.Key, StringComparer.Ordinal)
           .ToList();
+
+  public static IReadOnlyList<GroupSummary> ByStatusQuery(
+    IEnumerable<Order> source)
+  {
+    var query =
+        from order in source
+        group order by order.Status into g
+        let summary = new GroupSummary(
+            g.Key.ToString(),
+            g.Count(),
+            g.Sum(o => o.Total))
+        orderby summary.Total descending, summary.Key
+        select summary;
+
+    return query.ToList();
+  }
 
   public static (int Items, decimal Total,
       decimal Average, decimal Max) Totals(
@@ -81,4 +106,21 @@ public static class ReportService
 
     return (before, after, snapshot.Count);
   }
+
+  public static IReadOnlyList<CustomerOrderSummary> CustomerOrders(
+      IEnumerable<Customer> customers,
+      IEnumerable<Order> orders) =>
+      customers
+          .GroupJoin(
+              orders,
+              c => c.Id,
+              o => o.CustomerId,
+              (c, customerOrders) => new CustomerOrderSummary(
+                  c.Id,
+                  c.Name,
+                  customerOrders.Count(),
+                  customerOrders.Sum(o => o.Total)))
+          .OrderByDescending(x => x.Total)
+          .ThenBy(x => x.CustomerId, StringComparer.Ordinal)
+          .ToList();
 }
