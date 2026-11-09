@@ -39,7 +39,7 @@ public sealed class Order
   public void AddLine(string productId, string name, decimal price, int quantity)
   {
     if (Status != OrderStatus.Draft)
-      throw new InvalidOperationException(
+      throw new DomainException(
           $"Замовлення {Id} має статус {Status}, додавати товари не можна");
 
     OrderLine line = OrderLine.Create(productId, name, price, quantity);
@@ -56,7 +56,7 @@ public sealed class Order
     };
 
     if (!allowed)
-      throw new InvalidOperationException(
+      throw new DomainException(
           $"Неможливо змінити статус замовлення {Id} з {Status} на {newStatus}");
 
     Status = newStatus;
@@ -65,7 +65,7 @@ public sealed class Order
   public void Confirm()
   {
     if (_lines.Count == 0 && Status == OrderStatus.Draft)
-      throw new InvalidOperationException(
+      throw new DomainException(
           $"Не можна підтвердити порожнє замовлення {Id}");
 
     ChangeStatus(OrderStatus.Confirmed);

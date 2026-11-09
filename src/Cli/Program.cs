@@ -115,6 +115,57 @@ switch (command)
     Console.WriteLine($"Рядків у результаті: {benchmark.ResultCount}");
     break;
 
+  case "import-lines":
+    {
+      using var cts = new CancellationTokenSource();
+
+      ConsoleCancelEventHandler handler = (_, e) =>
+      {
+        e.Cancel = true;
+        cts.Cancel();
+      };
+
+      Console.CancelKeyPress += handler;
+
+      string importPath = Path.Combine(
+          Directory.GetCurrentDirectory(),
+          "data", "order-lines.json");
+
+      var service = new OrderService(store);
+
+      try
+      {
+        var order = service.CreateOrder("C-IMPORT");
+
+        int added = await service.ImportAsync(
+            new JsonOrderLineImporter(),
+            importPath,
+            order.Id,
+            cts.Token);
+
+        Console.WriteLine($"Імпортовано рядків: {added}");
+        Console.WriteLine($"Сума замовлення: {order.Total:F2} грн");
+      }
+      catch (OperationCanceledException)
+      {
+        Console.WriteLine("Імпорт скасовано.");
+      }
+      catch (DomainException ex)
+      {
+        Console.WriteLine($"Дані відхилено: {ex.Message}");
+      }
+      catch (FileNotFoundException)
+      {
+        Console.WriteLine($"Файл не знайдено: {importPath}");
+      }
+      finally
+      {
+        Console.CancelKeyPress -= handler;
+      }
+
+      break;
+    }
+
   default:
     Console.WriteLine("Невідома команда");
     break;
@@ -179,7 +230,7 @@ void DemoEvents()
     service.AddLine(
         created.Id, "P-003", "Mouse", 500m, 1);
   }
-  catch (InvalidOperationException ex)
+  catch (DomainException ex)
   {
     Console.WriteLine($"Помилка: {ex.Message}");
   }
