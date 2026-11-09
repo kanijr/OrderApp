@@ -17,29 +17,48 @@ public sealed class OrderService(
   public event EventHandler<OrderChangedEventArgs>? Changed;
 
   public async Task<int> ImportAsync(
-    IOrderLineImporter importer,
-    string path,
-    string orderId,
-    CancellationToken ct = default)
+      IOrderLineImporter importer,
+      string path,
+      string orderId,
+      IProgress<int>? progress = null,
+      CancellationToken ct = default)
   {
     ArgumentNullException.ThrowIfNull(importer);
+
+    if (string.IsNullOrWhiteSpace(path))
+      throw new ArgumentException(
+          "Шлях до файлу обов'язковий", nameof(path));
+
+    if (string.IsNullOrWhiteSpace(orderId))
+      throw new ArgumentException(
+          "ID замовлення обов'язковий", nameof(orderId));
 
     ct.ThrowIfCancellationRequested();
 
     var order = _store.GetById(orderId)
         ?? throw new ArgumentException(
-            $"Замовлення з ID={orderId} не знайдено.",
+            $"Замовлення {orderId} не знайдено.",
             nameof(orderId));
 
     if (order.Status != OrderStatus.Draft)
       throw new DomainException(
-          $"Замовлення {orderId} вже не є чернеткою.");
+          "Імпорт можливий лише до чернетки замовлення.");
 
-    var lines = await importer.LoadAsync(path, ct);
+    int total = 0;
+
+    await foreach (var line in importer.LoadAsync(path, ct))
+    {
+      ct.ThrowIfCancellationRequested();
+      total++;
+    }
+
+    ct.ThrowIfCancellationRequested();
+
+    progress?.Report(0);
 
     int added = 0;
 
-    foreach (var line in lines)
+    await foreach (var line in importer.LoadAsync(path, ct))
     {
       ct.ThrowIfCancellationRequested();
 
@@ -51,11 +70,19 @@ public sealed class OrderService(
           line.Quantity);
 
       added++;
+
+      if (total > 0)
+      {
+        int percent = (int)((long)added * 100 / total);
+        progress?.Report(percent);
+      }
     }
+
+    if (total == 0)
+      progress?.Report(100);
 
     return added;
   }
-
   private void OnChanged(Order order, OrderChangeKind kind)
   {
     var e = new OrderChangedEventArgs(

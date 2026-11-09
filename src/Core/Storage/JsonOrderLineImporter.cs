@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Core.Abstractions;
 using Core.Domain;
@@ -7,9 +8,9 @@ namespace Core.Storage;
 
 public sealed class JsonOrderLineImporter : IOrderLineImporter
 {
-  public async Task<IReadOnlyList<OrderLine>> LoadAsync(
+  public async IAsyncEnumerable<OrderLine> LoadAsync(
       string path,
-      CancellationToken ct = default)
+      [EnumeratorCancellation] CancellationToken ct = default)
   {
     ct.ThrowIfCancellationRequested();
 
@@ -21,44 +22,39 @@ public sealed class JsonOrderLineImporter : IOrderLineImporter
         4096,
         useAsync: true);
 
-    List<OrderLineDto> dtos;
-
-    try
+    var options = new JsonSerializerOptions
     {
-      dtos = await JsonSerializer.DeserializeAsync<
-          List<OrderLineDto>>(
-              stream,
-              new JsonSerializerOptions
-              {
-                PropertyNameCaseInsensitive = true
-              },
-              ct)
-          ?? throw new DomainException(
-              "Файл не містить списку рядків замовлення.");
-    }
-    catch (JsonException ex)
-    {
-      throw new DomainException(
-          $"Некоректний формат JSON: {ex.Message}", ex);
-    }
+      PropertyNameCaseInsensitive = true
+    };
 
-    var result = new List<OrderLine>(dtos.Count);
+    int index = 0;
 
-    for (int i = 0; i < dtos.Count; i++)
+    await foreach (var dto in
+        JsonSerializer.DeserializeAsyncEnumerable<OrderLineDto>(
+            stream,
+            options,
+            cancellationToken: ct))
     {
       ct.ThrowIfCancellationRequested();
+      index++;
+
+      if (dto is null)
+        throw new DomainException(
+            $"Запис {index}: значення null неприпустиме.");
+
+      OrderLine line;
 
       try
       {
-        result.Add(OrderLine.FromDto(dtos[i]));
+        line = OrderLine.FromDto(dto);
       }
       catch (ArgumentException ex)
       {
         throw new DomainException(
-            $"Запис {i + 1}: {ex.Message}", ex);
+            $"Запис {index}: {ex.Message}", ex);
       }
-    }
 
-    return result;
+      yield return line;
+    }
   }
 }

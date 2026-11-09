@@ -37,14 +37,24 @@ OrderApp/
 ├── data/
 │   ├── sample.csv
 │   ├── sample.json
+│   ├── order-lines.json
 │   └── mixed.csv
+├── tests/
+│   └── Core.Tests/
+│       ├── Core.Tests.csproj
+│       ├── ImportTests.cs
+│       ├── OrderServiceTests.cs
+│       ├── TestData.cs
+│       └── Abstractions/
 └── src/
     ├── Core/
     │   ├── Core.csproj
+    │   ├── DomainException.cs
     │   ├── EnvironmentInfo.cs
     │   ├── SampleData.cs
     │   ├── Abstractions/
     │   │   ├── INotificationSink.cs
+    │   │   ├── IOrderLineImporter.cs
     │   │   └── IOrderStore.cs
     │   ├── Dto/
     │   │   ├── ProductDto.cs
@@ -81,6 +91,7 @@ OrderApp/
     │       ├── CachingOrderStore.cs
     │       ├── FileOrderStore.cs
     │       ├── InMemoryOrderStore.cs
+    │       ├── JsonOrderLineImporter.cs
     │       └── StoreFactory.cs
     └── Cli/
         ├── Cli.csproj

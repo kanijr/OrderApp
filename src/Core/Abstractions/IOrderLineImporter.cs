@@ -4,7 +4,7 @@ namespace Core.Abstractions;
 
 public interface IOrderLineImporter
 {
-  Task<IReadOnlyList<OrderLine>> LoadAsync(
+  IAsyncEnumerable<OrderLine> LoadAsync(
       string path,
       CancellationToken ct = default);
 }

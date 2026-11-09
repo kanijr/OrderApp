@@ -6,6 +6,7 @@ using Core.Import;
 using Core.Reports;
 using Cli.Notifications;
 using Core;
+using System.Text.Json;
 
 IOrderStore store = StoreFactory.Create(args);
 
@@ -120,21 +121,48 @@ switch (command)
     {
       int pathIndex = Array.IndexOf(args, "--path");
 
-      if (pathIndex < 0 || pathIndex + 1 >= args.Length)
+      if (pathIndex < 0 ||
+          pathIndex + 1 >= args.Length ||
+          args[pathIndex + 1].StartsWith("--"))
       {
         Console.WriteLine(
-            "Використання: import-lines --path <файл>");
+            "Використання: import-lines --path <файл> " +
+            "[--timeout <секунди>] [--file]");
         break;
       }
 
-      string importPath = args[pathIndex + 1];
+      string importPath = Path.GetFullPath(
+          args[pathIndex + 1]);
 
-      using var cts = new CancellationTokenSource();
+      int timeoutSeconds = 30;
+      int timeoutIndex = Array.IndexOf(args, "--timeout");
+
+      if (timeoutIndex >= 0)
+      {
+        if (timeoutIndex + 1 >= args.Length ||
+            !int.TryParse(
+                args[timeoutIndex + 1],
+                out timeoutSeconds) ||
+            timeoutSeconds <= 0)
+        {
+          Console.WriteLine(
+              "Таймаут має бути додатним числом секунд.");
+          break;
+        }
+      }
+
+      using var userCts = new CancellationTokenSource();
+      using var timeoutCts = new CancellationTokenSource();
+
+      using var linkedCts =
+          CancellationTokenSource.CreateLinkedTokenSource(
+              userCts.Token,
+              timeoutCts.Token);
 
       ConsoleCancelEventHandler handler = (_, e) =>
       {
         e.Cancel = true;
-        cts.Cancel();
+        userCts.Cancel();
       };
 
       Console.CancelKeyPress += handler;
@@ -145,14 +173,31 @@ switch (command)
       {
         var order = service.CreateOrder("C-IMPORT");
 
+        IProgress<int> progress = new ConsoleImportProgress();
+
+        timeoutCts.CancelAfter(
+            TimeSpan.FromSeconds(timeoutSeconds));
+
         int added = await service.ImportAsync(
             new JsonOrderLineImporter(),
             importPath,
             order.Id,
-            cts.Token);
+            progress,
+            linkedCts.Token);
 
+        Console.WriteLine();
         Console.WriteLine($"Імпортовано рядків: {added}");
         Console.WriteLine($"Сума замовлення: {order.Total:F2} грн");
+      }
+      catch (OperationCanceledException)
+          when (userCts.IsCancellationRequested)
+      {
+        Console.WriteLine("\nІмпорт скасовано користувачем.");
+      }
+      catch (OperationCanceledException)
+          when (timeoutCts.IsCancellationRequested)
+      {
+        Console.WriteLine("\nПеревищено час виконання імпорту.");
       }
       catch (OperationCanceledException)
       {
@@ -162,9 +207,19 @@ switch (command)
       {
         Console.WriteLine($"Дані відхилено: {ex.Message}");
       }
+      catch (JsonException ex)
+      {
+        Console.WriteLine(
+            $"\nНекоректний JSON: {ex.Message}");
+      }
       catch (FileNotFoundException)
       {
         Console.WriteLine($"Файл не знайдено: {importPath}");
+      }
+      catch (IOException ex)
+      {
+        Console.WriteLine(
+            $"\nПомилка читання файлу: {ex.Message}");
       }
       finally
       {
@@ -179,6 +234,8 @@ switch (command)
 }
 
 return 0;
+
+
 
 void DemoDeferred()
 {
@@ -290,4 +347,18 @@ void DemoEvents()
 
   Console.WriteLine(
       $"Пропущено рядків: {skipped}");
+}
+
+sealed class ConsoleImportProgress : IProgress<int>
+{
+  private int _lastPercent = -1;
+
+  public void Report(int value)
+  {
+    if (value == _lastPercent)
+      return;
+
+    _lastPercent = value;
+    Console.Write($"\rПрогрес: {value,3}%");
+  }
 }
