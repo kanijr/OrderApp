@@ -65,18 +65,14 @@ public class ImportTests
     var service = new OrderService(new InMemoryOrderStore());
     var order = service.CreateOrder("C-001");
 
-    var importer = new FakeOrderLineImporter(
-    [
-        OrderLine.Create("P-001", "Ноутбук", 1000m, 1),
-            OrderLine.Create("P-002", "Миша", 200m, 2)
-    ]);
+    var importer = new FakeOrderLineImporter(TestData.Lines());
 
     int added = await service.ImportAsync(
         importer, "unused.json", order.Id);
 
-    Assert.Equal(2, added);
-    Assert.Equal(2, order.Lines.Count);
-    Assert.Equal(1400m, order.Total);
+    Assert.Equal(3, added);
+    Assert.Equal(3, order.Lines.Count);
+    Assert.Equal(2900m, order.Total);
   }
 
   private sealed class FakeOrderLineImporter(

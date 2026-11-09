@@ -62,13 +62,7 @@ public class OrderServiceTests
   [Fact]
   public void TopOrders_IsDeterministic()
   {
-    var first = Order.Create("C-001");
-    first.AddLine("P-001", "Товар A", 100m, 2);
-
-    var second = Order.Create("C-002");
-    second.AddLine("P-002", "Товар B", 300m, 1);
-
-    var orders = new[] { first, second };
+    var orders = TestData.Orders();
 
     var result1 = ReportService.TopOrders(orders, 2);
     var result2 = ReportService.TopOrders(orders, 2);
@@ -77,6 +71,7 @@ public class OrderServiceTests
         result1.Select(o => o.OrderId),
         result2.Select(o => o.OrderId));
 
-    Assert.Equal(second.Id, result1[0].OrderId);
+    Assert.Equal(2000m, result1[0].Total);
+    Assert.Equal(600m, result1[1].Total);
   }
 }

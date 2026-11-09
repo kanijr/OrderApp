@@ -19,8 +19,9 @@ if (args.Contains("--file"))
   Console.WriteLine($"Файл з даними: {dataPath}");
 }
 
-var command = args.FirstOrDefault(
-    a => !a.StartsWith("--")) ?? "report-top";
+var command = args.Length > 0 && !args[0].StartsWith("--")
+    ? args[0]
+    : "report-top";
 
 switch (command)
 {
@@ -117,6 +118,17 @@ switch (command)
 
   case "import-lines":
     {
+      int pathIndex = Array.IndexOf(args, "--path");
+
+      if (pathIndex < 0 || pathIndex + 1 >= args.Length)
+      {
+        Console.WriteLine(
+            "Використання: import-lines --path <файл>");
+        break;
+      }
+
+      string importPath = args[pathIndex + 1];
+
       using var cts = new CancellationTokenSource();
 
       ConsoleCancelEventHandler handler = (_, e) =>
@@ -126,10 +138,6 @@ switch (command)
       };
 
       Console.CancelKeyPress += handler;
-
-      string importPath = Path.Combine(
-          Directory.GetCurrentDirectory(),
-          "data", "order-lines.json");
 
       var service = new OrderService(store);
 
@@ -165,7 +173,6 @@ switch (command)
 
       break;
     }
-
   default:
     Console.WriteLine("Невідома команда");
     break;
