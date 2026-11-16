@@ -8,13 +8,61 @@
 
 Призначення: оформлення замовлень і підрахунку їхніх сум.
 
-### Відкладене виконання LINQ
+### Профілі
 
-Оператори `Where` і `Select` формують запит, але його оброблення починається під час перебирання або виклику завершального оператора, наприклад `Count()` чи `ToList()`. У демонстрації два виклики `Count()` повертають різні результати, оскільки між ними змінюється початкова колекція. Після матеріалізації через `ToList()` створюється окремий список, кількість елементів у якому не залежить від подальшої зміни джерела.
+| Профіль | Рівень логування | Каталог даних |
+|---|---|---|
+| Production | Information | data |
+| Development | Debug | data |
 
-### Порівняння синтаксисів LINQ
+Відносний каталог даних визначається від `AppContext.BaseDirectory`, а не від поточного робочого каталогу.
 
-Синтаксис запитів `(from...group...into)` декларативно відображає структуру групування у стилі SQL, що робить його читабельнішим для складних вибірок. Методний синтаксис є компактнішим для послідовних операцій і дає прямий доступ до всього функціонала LINQ. Обидва підходи дають однаковий результат, оскільки компілятор C# трансформує запити у виклики методів.
+### Ключі конфігурації
+
+| Ключ | Змінна середовища | Значення за замовчуванням |
+|---|---|---|
+| EnvironmentName | CROSSAPP_EnvironmentName | Production |
+| Storage:DataPath | CROSSAPP_Storage__DataPath | data |
+| Storage:FileName | CROSSAPP_Storage__FileName | orders.json |
+| Logging:MinimumLevel | CROSSAPP_Logging__MinimumLevel | Information |
+| Orders:Currency | CROSSAPP_Orders__Currency | UAH |
+| Integration:ApiKey | CROSSAPP_Integration__ApiKey | Не задано |
+
+### Приклади PowerShell
+
+```powershell
+$env:CROSSAPP_ENVIRONMENT = "Development"
+$env:CROSSAPP_Storage__DataPath = "my-data"
+$env:CROSSAPP_DATA_PATH = "my-data"
+dotnet run --project src/Cli -f net10.0 -- export
+```
+
+### Приклади Bash
+
+```bash
+export CROSSAPP_ENVIRONMENT=Development
+export CROSSAPP_Storage__DataPath=my-data
+export CROSSAPP_DATA_PATH=my-data
+dotnet run --project src/Cli -f net10.0 -- export
+```
+
+`CROSSAPP_DATA_PATH` має окремий пріоритет над `Storage:DataPath`.
+
+### Імпорт та експорт
+
+```bash
+dotnet run --project src/Cli -f net10.0 -- export
+dotnet run --project src/Cli -f net10.0 -- import
+dotnet run --project src/Cli -f net10.0 -- import --path backup.json
+```
+
+### User Secrets
+
+```bash
+dotnet user-secrets init --project src/Cli
+dotnet user-secrets set "Integration:ApiKey" "local-dev-key" --project src/Cli
+dotnet user-secrets list --project src/Cli
+```
 
 ### Інваріанти доменої моделі
 
@@ -34,11 +82,6 @@ OrderApp/
 ├── OrderApp.slnx
 ├── README.md
 ├── .gitignore
-├── data/
-│   ├── sample.csv
-│   ├── sample.json
-│   ├── order-lines.json
-│   └── mixed.csv
 ├── tests/
 │   └── Core.Tests/
 │       ├── Core.Tests.csproj
@@ -56,6 +99,8 @@ OrderApp/
     │   │   ├── INotificationSink.cs
     │   │   ├── IOrderLineImporter.cs
     │   │   └── IOrderStore.cs
+    │   ├── Abstractions/
+    │   │   └── AppOptions.cs
     │   ├── Dto/
     │   │   ├── ProductDto.cs
     │   │   ├── CustomerDto.cs
@@ -92,8 +137,11 @@ OrderApp/
     │       ├── FileOrderStore.cs
     │       ├── InMemoryOrderStore.cs
     │       ├── JsonOrderLineImporter.cs
+    │       ├── OrderJsonSerializer.cs
     │       └── StoreFactory.cs
     └── Cli/
+        ├── appsettings.Development.json
+        ├── appsettings.json
         ├── Cli.csproj
         ├── Program.cs
         └── Notifications/

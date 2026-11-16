@@ -7,18 +7,45 @@ using Core.Reports;
 using Cli.Notifications;
 using Core;
 using System.Text.Json;
+using System.Reflection;
+using Core.Configuration;
+using Microsoft.Extensions.Configuration;
 
-IOrderStore store = StoreFactory.Create(args);
+
+var envName = Environment.GetEnvironmentVariable("CROSSAPP_ENVIRONMENT")
+    ?? "Production";
+
+var config = new ConfigurationBuilder()
+    .SetBasePath(AppContext.BaseDirectory)
+    .AddJsonFile("appsettings.json", optional: false)
+    .AddJsonFile($"appsettings.{envName}.json", optional: true)
+    .AddUserSecrets(Assembly.GetExecutingAssembly(), optional: true)
+    .AddEnvironmentVariables(prefix: "CROSSAPP_")
+    .Build();
+
+var options = config.Get<AppOptions>() ?? new AppOptions();
+
+var legacyPath = Environment.GetEnvironmentVariable("CROSSAPP_DATA_PATH");
+
+if (!string.IsNullOrWhiteSpace(legacyPath))
+  options.Storage.DataPath = legacyPath;
+
+string dataPath = options.Storage.ResolveFullPath(AppContext.BaseDirectory);
+
+string currency = options.Orders.Currency;
+
+string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "app.log");
+
+IOrderStore store = StoreFactory.Create(args, dataPath);
 
 Console.WriteLine($"Сховище: {store.GetType().Name}");
+Console.WriteLine($"Середовище: {envName}; Лог: {options.Logging.MinimumLevel}");
+Console.WriteLine($"Файл даних: {dataPath}");
 
-if (args.Contains("--file"))
-{
-  string dataPath = Path.Combine(
-      Directory.GetCurrentDirectory(), "data", "orders.json");
+var apiKey = config["Integration:ApiKey"];
 
-  Console.WriteLine($"Файл з даними: {dataPath}");
-}
+Console.WriteLine(apiKey is null ? "ApiKey: не заданий"
+        : $"ApiKey: присутній, довжина {apiKey.Length}");
 
 var command = args.Length > 0 && !args[0].StartsWith("--")
     ? args[0]
@@ -26,13 +53,60 @@ var command = args.Length > 0 && !args[0].StartsWith("--")
 
 switch (command)
 {
+  case "export":
+    try
+    {
+      OrderJsonSerializer.Save(dataPath, store.List());
+
+      Console.WriteLine($"Експортовано {store.List().Count} замовлень.");
+    }
+    catch (Exception ex) when (
+        ex is IOException or
+        UnauthorizedAccessException or
+        InvalidDataException)
+    {
+      Console.WriteLine($"Помилка експорту: {ex.Message}");
+      return 1;
+    }
+    break;
+
+  case "import":
+    {
+      int sourceIndex = Array.IndexOf(args, "--path");
+
+      string sourcePath = sourceIndex >= 0 && sourceIndex + 1 < args.Length
+              ? Path.GetFullPath(args[sourceIndex + 1])
+              : dataPath;
+
+      Console.WriteLine(sourcePath);
+      try
+      {
+        var orders = OrderJsonSerializer.Load(sourcePath);
+
+        new FileOrderStore(dataPath).ReplaceAll(orders);
+
+        Console.WriteLine($"Імпортовано {orders.Count} замовлень.");
+      }
+      catch (Exception ex) when (
+          ex is IOException or
+          UnauthorizedAccessException or
+          InvalidDataException)
+      {
+        Console.WriteLine($"Дані відхилено: {ex.Message}");
+        return 1;
+      }
+
+      break;
+    }
+
+
   case "report-top":
     foreach (var l in ReportService.TopCustomers(store.List(), 5))
     {
       Console.WriteLine(
           $"{l.CustomerId,-10} " +
           $"Замовлень: {l.OrdersCount,3} " +
-          $"Сума: {l.Total,12:F2} грн");
+          $"Сума: {l.Total,12:F2} {currency}");
     }
     break;
 
@@ -43,7 +117,7 @@ switch (command)
           $"{o.OrderId,-10} " +
           $"{o.CustomerId,-10} " +
           $"{o.Status,-12} " +
-          $"{o.Total,12:F2} грн");
+          $"{o.Total,12:F2} {currency}");
     }
     break;
 
@@ -53,7 +127,7 @@ switch (command)
       Console.WriteLine(
           $"{g.Key,-12} " +
           $"Замовлень: {g.Count,3} " +
-          $"Сума: {g.Total,12:F2} грн");
+          $"Сума: {g.Total,12:F2} {currency}");
     }
     break;
 
@@ -62,9 +136,9 @@ switch (command)
 
     Console.WriteLine(
         $"Замовлень: {t.Items}, " +
-        $"Загальна сума: {t.Total:F2} грн, " +
-        $"Середній чек: {t.Average:F2} грн, " +
-        $"Максимальне: {t.Max:F2} грн");
+        $"Загальна сума: {t.Total:F2} {currency}, " +
+        $"Середній чек: {t.Average:F2} {currency}, " +
+        $"Максимальне: {t.Max:F2} {currency}");
     break;
 
   case "demo-deferred":
@@ -83,7 +157,7 @@ switch (command)
           $"{c.CustomerId,-8} " +
           $"{c.CustomerName,-12} " +
           $"Замовлень: {c.OrdersCount,3} " +
-          $"Сума: {c.Total,12:F2} грн");
+          $"Сума: {c.Total,12:F2} {currency}");
     }
     break;
 
@@ -94,7 +168,7 @@ switch (command)
           $"{o.OrderId,-10} " +
           $"{o.CustomerId,-10} " +
           $"{o.Status,-12} " +
-          $"{o.Total,12:F2} грн");
+          $"{o.Total,12:F2} {currency}");
     }
     break;
 
@@ -104,7 +178,7 @@ switch (command)
       Console.WriteLine(
           $"{g.Key,-12} " +
           $"Замовлень: {g.Count,3} " +
-          $"Сума: {g.Total,12:F2} грн");
+          $"Сума: {g.Total,12:F2} {currency}");
     }
     break;
 
@@ -187,7 +261,7 @@ switch (command)
 
         Console.WriteLine();
         Console.WriteLine($"Імпортовано рядків: {added}");
-        Console.WriteLine($"Сума замовлення: {order.Total:F2} грн");
+        Console.WriteLine($"Сума замовлення: {order.Total:F2} {currency}");
       }
       catch (OperationCanceledException)
           when (userCts.IsCancellationRequested)
@@ -316,8 +390,7 @@ void DemoEvents()
 
   var expensive = service.FindAll(o => o.Total > 5000m);
 
-  Console.WriteLine(
-      $"Замовлень понад 5000 грн: {expensive.Count}");
+  Console.WriteLine($"Замовлень понад 5000 {currency}: {expensive.Count}");
 
   foreach (var order in expensive)
   {

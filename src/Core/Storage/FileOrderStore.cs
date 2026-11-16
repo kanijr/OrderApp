@@ -1,16 +1,10 @@
-
-using System.Text.Json;
 using Core.Abstractions;
 using Core.Domain;
-using Core.Dto;
 
 namespace Core.Storage;
 
 public sealed class FileOrderStore(string path) : IOrderStore
 {
-  private static readonly JsonSerializerOptions Options =
-      new() { WriteIndented = true };
-
   private readonly Dictionary<string, Order> _cache =
       new(StringComparer.OrdinalIgnoreCase);
 
@@ -23,30 +17,14 @@ public sealed class FileOrderStore(string path) : IOrderStore
 
     if (File.Exists(_path))
     {
-      var dtos = JsonSerializer.Deserialize<List<OrderDto>>(
-          File.ReadAllText(_path)) ?? [];
-
-      foreach (var dto in dtos)
-      {
-        var order = Order.FromDto(dto);
-        _cache[order.Id] = order;
-      }
+      foreach (var order in OrderJsonSerializer.Load(_path))
+        _cache.Add(order.Id, order);
     }
 
     _loaded = true;
   }
 
-  private void Flush()
-  {
-    Directory.CreateDirectory(
-        Path.GetDirectoryName(_path)!);
-
-    File.WriteAllText(
-        _path,
-        JsonSerializer.Serialize(
-            _cache.Values.Select(o => o.ToDto()).ToList(),
-            Options));
-  }
+  private void Flush() => OrderJsonSerializer.Save(_path, _cache.Values);
 
   public IReadOnlyList<Order> List()
   {
@@ -75,6 +53,7 @@ public sealed class FileOrderStore(string path) : IOrderStore
 
   public void Update(Order order)
   {
+    ArgumentNullException.ThrowIfNull(order);
     EnsureLoaded();
     _cache[order.Id] = order;
     Flush();
@@ -89,5 +68,22 @@ public sealed class FileOrderStore(string path) : IOrderStore
 
     Flush();
     return true;
+  }
+
+  public void ReplaceAll(IEnumerable<Order> orders)
+  {
+    ArgumentNullException.ThrowIfNull(orders);
+
+    var replacement = orders.ToDictionary(
+        o => o.Id, StringComparer.OrdinalIgnoreCase);
+
+    OrderJsonSerializer.Save(_path, replacement.Values);
+
+    _cache.Clear();
+
+    foreach (var pair in replacement)
+      _cache.Add(pair.Key, pair.Value);
+
+    _loaded = true;
   }
 }
