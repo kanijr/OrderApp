@@ -1,0 +1,91 @@
+
+@baseUrl = http://localhost:5080
+@orderId = {{createOrder.response.body.$.id}}
+
+### 
+GET {{baseUrl}}/api/orders
+
+### 
+GET {{baseUrl}}/api/orders/O-001
+
+### 
+# @name createOrder
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "customerId": "C-008",
+  "lines": [
+    {
+      "productId": "P-001",
+      "name": "Ноутбук Lenovo",
+      "price": 29999.99,
+      "quantity": 1
+    },
+    {
+      "productId": "P-002",
+      "name": "Миша Logitech",
+      "price": 799.50,
+      "quantity": 2
+    }
+  ]
+}
+
+### 
+GET {{baseUrl}}/api/orders/{{orderId}}
+
+### 
+PUT {{baseUrl}}/api/orders/{{orderId}}
+Content-Type: application/json
+
+{
+  "customerId": "C-008",
+  "lines": [
+    {
+      "productId": "P-003",
+      "name": "Клавіатура",
+      "price": 1499.00,
+      "quantity": 2
+    }
+  ]
+}
+
+### 
+GET {{baseUrl}}/api/orders/{{orderId}}/total
+
+### 
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "customerId": "",
+  "lines": []
+}
+
+### 
+PUT {{baseUrl}}/api/orders/{{orderId}}
+Content-Type: application/json
+
+{
+  "customerId": "C-008",
+  "lines": [
+    {
+      "productId": "",
+      "name": "",
+      "price": -100,
+      "quantity": 0
+    }
+  ]
+}
+
+### 
+POST {{baseUrl}}/api/orders/{{orderId}}/confirm
+
+### 
+POST {{baseUrl}}/api/orders/{{orderId}}/cancel
+
+### 
+DELETE {{baseUrl}}/api/orders/{{orderId}}
+
+### 
+GET {{baseUrl}}/api/orders/{{orderId}}

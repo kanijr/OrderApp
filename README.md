@@ -8,6 +8,49 @@
 
 Призначення: оформлення замовлень і підрахунку їхніх сум.
 
+### Запуск API
+
+```bash
+dotnet run --project src/Api --launch-profile http
+```
+
+Адреса API: http://localhost:5080
+
+### Документація
+
+У середовищі Development доступні:
+
+- Scalar UI: http://localhost:5080/scalar/v1
+- OpenAPI: http://localhost:5080/openapi/v1.json
+
+### Приклади curl
+
+1. Отримання всіх замовлень
+
+```bash
+curl -i http://localhost:5080/api/orders
+```
+
+2. Отримання замовлення за ID
+
+```bash
+curl -i http://localhost:5080/api/orders/O-001
+```
+
+3. Створення замовлення
+
+```bash
+curl -i -X POST http://localhost:5080/api/orders \
+  -H "Content-Type: application/json" \
+  -d '{"customerId":"C-008","lines":[{"productId":"P-001","name":"Ноутбук Lenovo","price":29999.99,"quantity":1},{"productId":"P-002","name":"Миша Logitech","price":799.50,"quantity":2}]}'
+```
+
+4. Видалення замовлення
+
+```bash
+curl -i -X DELETE http://localhost:5080/api/orders/<id>
+```
+
 ### Профілі
 
 | Профіль | Рівень логування | Каталог даних |
@@ -87,19 +130,32 @@ OrderApp/
 │       ├── Core.Tests.csproj
 │       ├── ImportTests.cs
 │       ├── OrderServiceTests.cs
-│       ├── TestData.cs
-│       └── Abstractions/
+│       └── TestData.cs
 └── src/
+    ├── Api/
+    │   ├── Api.csproj
+    │   ├── Api.http
+    │   ├── appsettings.Development.json
+    │   ├── appsettings.json
+    │   ├── Program.cs
+    │   ├── Contracts/
+    │   │   ├── OrderDto.cs
+    │   │   └── SaveOrderRequest.cs
+    │   ├── Endpoints/
+    │   │   └── OrderEndpoints.cs
+    │   └── Properties/
+    │       └── launchSettings.json
     ├── Core/
     │   ├── Core.csproj
     │   ├── DomainException.cs
     │   ├── EnvironmentInfo.cs
     │   ├── SampleData.cs
     │   ├── Abstractions/
+    │   │   ├── IAsyncOrderStore.cs
     │   │   ├── INotificationSink.cs
     │   │   ├── IOrderLineImporter.cs
     │   │   └── IOrderStore.cs
-    │   ├── Abstractions/
+    │   ├── Configuration/
     │   │   └── AppOptions.cs
     │   ├── Dto/
     │   │   ├── ProductDto.cs
@@ -131,8 +187,10 @@ OrderApp/
     │   │   ├── OrderReportLine.cs
     │   │   └── ReportService.cs
     │   ├── Services/
+    │   │   ├── AsyncOrderService.cs
     │   │   └── OrderService.cs
     │   └── Storage/
+    │       ├── AsyncInMemoryOrderStore.cs
     │       ├── CachingOrderStore.cs
     │       ├── FileOrderStore.cs
     │       ├── InMemoryOrderStore.cs

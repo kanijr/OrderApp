@@ -7,5 +7,6 @@ public sealed record OrderDto(
     string Id,
     string CustomerId,
     OrderStatus Status,
-    List<OrderLineDto> Lines
+    List<OrderLineDto> Lines,
+    DateTimeOffset? CreatedAt = null
 );

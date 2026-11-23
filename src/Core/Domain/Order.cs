@@ -9,15 +9,22 @@ public sealed class Order
 
   public string Id { get; }
   public string CustomerId { get; }
+  public DateTimeOffset CreatedAt { get; }
+
   public OrderStatus Status { get; private set; } = OrderStatus.Draft;
 
   public IReadOnlyList<OrderLine> Lines => _lines.AsReadOnly();
   public decimal Total => _lines.Sum(line => line.Total);
 
-  private Order(string id, string customerId)
+
+  private Order(
+      string id,
+      string customerId,
+      DateTimeOffset createdAt)
   {
     Id = id;
     CustomerId = customerId;
+    CreatedAt = createdAt;
   }
 
   public static Order Create(string customerId)
@@ -25,7 +32,10 @@ public sealed class Order
     return CreateWithId(Guid.NewGuid().ToString("N"), customerId);
   }
 
-  private static Order CreateWithId(string id, string customerId)
+  public static Order CreateWithId(
+      string id,
+      string customerId,
+      DateTimeOffset? createdAt = null)
   {
     if (string.IsNullOrWhiteSpace(id))
       throw new ArgumentException("Номер замовлення обов'язковий", nameof(id));
@@ -33,8 +43,12 @@ public sealed class Order
     if (string.IsNullOrWhiteSpace(customerId))
       throw new ArgumentException("Ідентифікатор покупця обов'язковий", nameof(customerId));
 
-    return new Order(id.Trim(), customerId.Trim());
+    return new Order(
+        id.Trim(),
+        customerId.Trim(),
+        createdAt ?? DateTimeOffset.UtcNow);
   }
+
 
   public void AddLine(string productId, string name, decimal price, int quantity)
   {
@@ -76,18 +90,24 @@ public sealed class Order
     ChangeStatus(OrderStatus.Cancelled);
   }
 
+
   public OrderDto ToDto() => new(
       Id,
       CustomerId,
       Status,
-      _lines.Select(line => line.ToDto()).ToList()
+      _lines.Select(line => line.ToDto()).ToList(),
+      CreatedAt
   );
+
 
   public static Order FromDto(OrderDto dto)
   {
     ArgumentNullException.ThrowIfNull(dto);
 
-    Order order = CreateWithId(dto.Id, dto.CustomerId);
+    Order order = CreateWithId(
+        dto.Id,
+        dto.CustomerId,
+        dto.CreatedAt);
 
     if (dto.Lines is null)
       throw new ArgumentException("Список товарів відсутній", nameof(dto));
