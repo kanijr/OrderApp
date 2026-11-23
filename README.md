@@ -126,6 +126,10 @@ OrderApp/
 ├── README.md
 ├── .gitignore
 ├── tests/
+│   ├── Api.Tests/
+│   │   ├── Api.Tests.csproj
+│   │   ├── OrderApiFactory.cs
+│   │   └── OrderEndpointsTests.cs
 │   └── Core.Tests/
 │       ├── Core.Tests.csproj
 │       ├── ImportTests.cs
@@ -140,9 +144,16 @@ OrderApp/
     │   ├── Program.cs
     │   ├── Contracts/
     │   │   ├── OrderDto.cs
+    │   │   ├── PageResults.cs
     │   │   └── SaveOrderRequest.cs
     │   ├── Endpoints/
     │   │   └── OrderEndpoints.cs
+    │   ├── Exceptions/
+    │   │   └── DomainExceptionHandler.cs
+    │   ├── Validation/
+    │   │   ├── SaveOrderLineRequestValidator.cs
+    │   │   ├── SaveOrderRequestValidator.cs
+    │   │   └── ValidationFilter.cs
     │   └── Properties/
     │       └── launchSettings.json
     ├── Core/
