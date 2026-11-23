@@ -8,6 +8,40 @@
 
 Призначення: оформлення замовлень і підрахунку їхніх сум.
 
+## База даних (EF Core + SQLite)
+
+База SQLite зберігається у `src/Api/data/app.db`. Шлях задається в `src/Api/appsettings.json` через ключ `ConnectionStrings:AppDb`:
+
+```json
+"ConnectionStrings": {
+  "AppDb": "Data Source=data/app.db"
+}
+```
+
+Відносний шлях визначається від `ContentRootPath` проєкту Api. Для перевизначення використовується змінна середовища `ConnectionStrings__AppDb`.
+
+### Міграції
+
+Створення міграції:
+
+```bash
+dotnet ef migrations add InitialCreate --project src/Infrastructure --startup-project src/Api
+```
+
+Застосування міграцій:
+
+```bash
+dotnet ef database update --project src/Infrastructure --startup-project src/Api
+```
+
+### Скидання бази даних
+
+Зупинити API, видалити `src/Api/data/app.db` і повторно застосувати міграції:
+
+```bash
+dotnet ef database update --project src/Infrastructure --startup-project src/Api
+```
+
 ### Запуск API
 
 ```bash

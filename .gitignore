@@ -482,4 +482,7 @@ $RECYCLE.BIN/
 *.swp
 
 **/data/
-**/secrets.json
+**/secrets.
+*.db
+*.db-shm
+*.db-wal
