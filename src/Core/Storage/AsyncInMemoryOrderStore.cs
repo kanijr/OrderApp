@@ -14,7 +14,7 @@ public sealed class AsyncInMemoryOrderStore(
 
   private readonly object _sync = new();
 
-  public ValueTask<IReadOnlyList<Order>> ListAsync(
+  public Task<IReadOnlyList<Order>> ListAsync(
       CancellationToken ct = default)
   {
     ct.ThrowIfCancellationRequested();
@@ -24,11 +24,11 @@ public sealed class AsyncInMemoryOrderStore(
       IReadOnlyList<Order> result =
           _items.Values.ToList();
 
-      return ValueTask.FromResult(result);
+      return Task.FromResult(result);
     }
   }
 
-  public ValueTask<Order?> GetByIdAsync(
+  public Task<Order?> GetByIdAsync(
       string id,
       CancellationToken ct = default)
   {
@@ -38,11 +38,11 @@ public sealed class AsyncInMemoryOrderStore(
     {
       Order? result = _items.GetValueOrDefault(id);
 
-      return ValueTask.FromResult(result);
+      return Task.FromResult(result);
     }
   }
 
-  public ValueTask AddAsync(
+  public Task AddAsync(
       Order order,
       CancellationToken ct = default)
   {
@@ -58,10 +58,10 @@ public sealed class AsyncInMemoryOrderStore(
       _items.Add(order.Id, order);
     }
 
-    return ValueTask.CompletedTask;
+    return Task.CompletedTask;
   }
 
-  public ValueTask UpdateAsync(
+  public Task UpdateAsync(
       Order order,
       CancellationToken ct = default)
   {
@@ -73,10 +73,10 @@ public sealed class AsyncInMemoryOrderStore(
       _items[order.Id] = order;
     }
 
-    return ValueTask.CompletedTask;
+    return Task.CompletedTask;
   }
 
-  public ValueTask<bool> RemoveAsync(
+  public Task<bool> RemoveAsync(
       string id,
       CancellationToken ct = default)
   {
@@ -86,7 +86,7 @@ public sealed class AsyncInMemoryOrderStore(
     {
       bool removed = _items.Remove(id);
 
-      return ValueTask.FromResult(removed);
+      return Task.FromResult(removed);
     }
   }
 }

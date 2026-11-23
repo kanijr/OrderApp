@@ -5,22 +5,22 @@ namespace Core.Abstractions;
 
 public interface IAsyncOrderStore
 {
-  ValueTask<IReadOnlyList<Order>> ListAsync(
+  Task<IReadOnlyList<Order>> ListAsync(
       CancellationToken ct = default);
 
-  ValueTask<Order?> GetByIdAsync(
+  Task<Order?> GetByIdAsync(
       string id,
       CancellationToken ct = default);
 
-  ValueTask AddAsync(
+  Task AddAsync(
       Order order,
       CancellationToken ct = default);
 
-  ValueTask UpdateAsync(
+  Task UpdateAsync(
       Order order,
       CancellationToken ct = default);
 
-  ValueTask<bool> RemoveAsync(
+  Task<bool> RemoveAsync(
       string id,
       CancellationToken ct = default);
 }
